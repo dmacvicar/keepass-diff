@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/tobischo/gokeepasslib"
+	"gopkg.in/AlecAivazis/survey.v1"
 	"os"
 )
 
@@ -12,13 +13,17 @@ func main() {
 	keyPtr := flag.String("key", "", "Key file for the keepass database.")
 	flag.Parse()
 
-	if flag.NArg() < 2 {
-		flag.PrintDefaults()
-		os.Exit(1)
-	} else if *passPtr == "" {
-		flag.PrintDefaults()
-		os.Exit(1)
+	if *passPtr == "" {
+		prompt := &survey.Password{
+			Message: "Please type your password",
+		}
+		survey.AskOne(prompt, passPtr, nil)
+		if *passPtr == "" {
+			flag.PrintDefaults()
+			os.Exit(1)
+		}
 	}
+
 	fmt.Printf("Diffing %s and %s\n", flag.Arg(0), flag.Arg(1))
 	kpdiff(flag.Arg(0), flag.Arg(1), *passPtr, *keyPtr)
 }
