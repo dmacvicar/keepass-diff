@@ -9,6 +9,7 @@ import (
 
 func main() {
 	passPtr := flag.String("pass", "", "Password for the keepass database.")
+	keyPtr := flag.String("key", "", "Key file for the keepass database.")
 	flag.Parse()
 
 	if flag.NArg() < 2 {
@@ -19,12 +20,12 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("Diffing %s and %s\n", flag.Arg(0), flag.Arg(1))
-	kpdiff(flag.Arg(0), flag.Arg(1), *passPtr)
+	kpdiff(flag.Arg(0), flag.Arg(1), *passPtr, *keyPtr)
 }
 
-func kpdiff(fp1, fp2, pass string) {
-	db1 := openDatabase(fp1, pass)
-	db2 := openDatabase(fp2, pass)
+func kpdiff(fp1, fp2, pass string, key string) {
+	db1 := openDatabase(fp1, pass, key)
+	db2 := openDatabase(fp2, pass, key)
 
 	kpdiffGroups(db1.Content.Root.Groups, db2.Content.Root.Groups)
 }
@@ -110,7 +111,7 @@ func kpdiffEntry(entry1, entry2 *gokeepasslib.Entry) {
 	}
 }
 
-func openDatabase(fp1, pass string) *gokeepasslib.Database {
+func openDatabase(fp1, pass string, key string) *gokeepasslib.Database {
 	file1, err := os.Open(fp1)
 	if err != nil {
 		fmt.Println("Failed opening", fp1, ":", err)
@@ -118,7 +119,15 @@ func openDatabase(fp1, pass string) *gokeepasslib.Database {
 	}
 
 	db1 := gokeepasslib.NewDatabase()
-	db1.Credentials = gokeepasslib.NewPasswordCredentials(pass)
+	if key == "" {
+		db1.Credentials = gokeepasslib.NewPasswordCredentials(pass)
+	} else {
+		db1.Credentials, err = gokeepasslib.NewPasswordAndKeyCredentials(pass, key)
+		if err != nil {
+			fmt.Println("Failed credentials: ", err)
+			os.Exit(1)
+		}
+	}
 	err = gokeepasslib.NewDecoder(file1).Decode(db1)
 	if err != nil {
 		fmt.Println("Failed decoding", fp1, ":", err)
